@@ -2,7 +2,10 @@
 <html lang="tr">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#0d1117">
+  <meta name="mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="manifest.webmanifest">
   <title>Tetik Aim · Aim Antrenmanı</title>
   <link rel="icon" href="favicon.png">
   <link rel="stylesheet" href="css/style.css">
@@ -26,7 +29,11 @@
     <div id="hud-fps" class="hud-fps hidden"></div>
     <div id="popups"></div>
     <div id="center-msg"></div>
+    <button id="pause-btn" class="touch-only" aria-label="Duraklat">❚❚</button>
+    <button id="fire-btn" class="hidden" aria-label="Ateş">ATEŞ</button>
   </div>
+
+  <div id="rotate" class="overlay"><div class="panel small"><div style="font-size:48px">⟳</div><h2>Cihazı yatay çevir</h2><p class="muted">Oyun yatay ekranda oynanır.</p></div></div>
 
   <!-- Pause -->
   <div id="pause" class="overlay hidden">
@@ -92,7 +99,7 @@
     <section class="page" id="page-modes">
       <div class="filters" id="mode-filters"></div>
       <div class="mode-grid" id="mode-grid"></div>
-      <div class="foot muted small">
+      <div class="foot muted small" id="foot-hint">
         Sol tık: ateş · Esc: duraklat · R: yeniden başlat · Hassasiyet CS2 ile birebir (m_yaw 0.022)
       </div>
     </section>
@@ -163,6 +170,18 @@
           <label class="check"><input type="checkbox" id="s-countdown"> Başlamadan geri sayım</label>
           <label class="check"><input type="checkbox" id="s-fps"> FPS göster</label>
           <label>Çözünürlük ölçeği <input type="range" id="s-scale" min="0.5" max="1" step="0.05"><span id="s-scale-v"></span></label>
+        </div>
+
+        <div class="card">
+          <h3>Dokunmatik</h3>
+          <label>Kontrol
+            <select id="t-mode">
+              <option value="tap">Dokunduğun yere ateş</option>
+              <option value="drag">Sürükle-nişan + ateş butonu</option>
+            </select>
+          </label>
+          <label>Sürükleme hassasiyeti <input type="range" id="t-sens" min="0.05" max="0.6" step="0.01"><span id="t-sens-v"></span></label>
+          <p class="muted small">Dokunduğun yere ateş: hedefe parmağınla dokun, takip modlarında parmağını hedefin üzerinde tut. Sürükle-nişan: ekranı sürükleyerek bak, sağ alttaki butonla ateş et (mobil FPS gibi).</p>
         </div>
 
         <div class="card">

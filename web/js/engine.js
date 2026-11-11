@@ -79,6 +79,8 @@ export class Engine {
     this.scene.add(this.room, this.props, this.targets, this.fx);
     this.raycaster = new THREE.Raycaster();
     this.center = new THREE.Vector2(0, 0);
+    this.trackPoint = new THREE.Vector2(0, 0); // tap mode: finger position (NDC)
+    this.isTouch = isTouchDevice();
     this.materials = new Map();
     this.particles = [];
     this.decals = [];
@@ -210,15 +212,79 @@ export class Engine {
     });
     document.addEventListener('mouseup', e => { if (e.button === 0) this.firing = false; });
     document.addEventListener('pointerlockchange', () => {
+      if (this.isTouch) return;
       if (document.pointerLockElement !== this.canvas) {
         this.firing = false;
         if (this.state === 'play' || this.state === 'countdown') this.pause();
       }
     });
+    this.bindTouch();
+  }
+
+  /** Touch screen controls.
+   *  tap:  touching the screen shoots exactly where the finger is (hold a
+   *        finger on the target in tracking modes).
+   *  drag: drag anywhere to aim like a mobile shooter, fire with the button. */
+  bindTouch() {
+    const active = () => this.state === 'play' || this.state === 'countdown';
+    const ndc = t => new THREE.Vector2((t.clientX / window.innerWidth) * 2 - 1, -(t.clientY / window.innerHeight) * 2 + 1);
+    this.lookTouch = null;
+    this.canvas.addEventListener('touchstart', e => {
+      e.preventDefault();
+      audio.unlock();
+      if (!active()) return;
+      for (const t of e.changedTouches) {
+        if (this.s.touchMode === 'tap') {
+          this.trackPoint.copy(ndc(t));
+          this.tapId = t.identifier;
+          this.firing = true;
+          if (this.state === 'play' && !this.mode.tracking) this.shoot(ndc(t));
+        } else if (this.lookTouch === null) {
+          this.lookTouch = { id: t.identifier, x: t.clientX, y: t.clientY };
+        }
+      }
+    }, { passive: false });
+    this.canvas.addEventListener('touchmove', e => {
+      e.preventDefault();
+      for (const t of e.changedTouches) {
+        if (this.s.touchMode === 'tap' && t.identifier === this.tapId) this.trackPoint.copy(ndc(t));
+        if (this.lookTouch && t.identifier === this.lookTouch.id && active()) {
+          const k = this.s.touchSens * DEG;
+          this.yaw -= (t.clientX - this.lookTouch.x) * k;
+          this.pitch -= (t.clientY - this.lookTouch.y) * k;
+          this.pitch = Math.max(-89 * DEG, Math.min(89 * DEG, this.pitch));
+          this.camera.rotation.set(this.pitch, this.yaw, 0);
+          this.lookTouch.x = t.clientX;
+          this.lookTouch.y = t.clientY;
+        }
+      }
+    }, { passive: false });
+    const end = e => {
+      for (const t of e.changedTouches) {
+        if (this.lookTouch && t.identifier === this.lookTouch.id) this.lookTouch = null;
+        if (t.identifier === this.tapId) { this.tapId = null; if (this.s.touchMode === 'tap') this.firing = false; }
+      }
+    };
+    this.canvas.addEventListener('touchend', end);
+    this.canvas.addEventListener('touchcancel', end);
+  }
+
+  /** Fire button (drag mode). */
+  fireButton(down) {
+    this.firing = down;
+    if (down && this.state === 'play' && !this.mode.tracking) this.shoot();
   }
 
   async lock() {
     audio.unlock();
+    if (this.isTouch) {
+      // No pointer lock on touch screens: go fullscreen and landscape instead.
+      try {
+        if (!document.fullscreenElement && !window.__TAURI__) await document.documentElement.requestFullscreen({ navigationUI: 'hide' });
+        await screen.orientation?.lock?.('landscape');
+      } catch { /* not supported: the portrait overlay asks to rotate */ }
+      return true;
+    }
     try {
       await this.canvas.requestPointerLock({ unadjustedMovement: this.s.raw });
     } catch {
@@ -384,11 +450,11 @@ export class Engine {
   }
 
   /** What is under the crosshair: {target, part, point, normal, object} or null. */
-  pick() {
+  pick(point = this.center) {
     // Mouse moves and targets spawn between frames: raycast against the
     // current transforms, not the last render's.
     this.scene.updateMatrixWorld();
-    this.raycaster.setFromCamera(this.center, this.camera);
+    this.raycaster.setFromCamera(point, this.camera);
     const hits = this.raycaster.intersectObjects([this.targets, this.props, this.room], true);
     for (const h of hits) {
       let o = h.object;
@@ -401,7 +467,7 @@ export class Engine {
     return null;
   }
 
-  shoot() {
+  shoot(point) {
     const now = performance.now();
     if (now - this.lastShot < (this.mode.fireInterval || 0)) return;
     this.lastShot = now;
@@ -409,7 +475,7 @@ export class Engine {
     this.stats.shots++;
     audio.shot();
     this.flash.intensity = 4;
-    const p = this.pick();
+    const p = this.pick(point);
     if (p?.target && p.target.alive) {
       this.mode.onHit(this.ctx, p.target, p.part, p.point);
     } else {
@@ -426,7 +492,7 @@ export class Engine {
     while (this.trackAcc >= step) {
       this.trackAcc -= step;
       this.stats.ticks++;
-      const p = this.pick();
+      const p = this.pick(this.isTouch && this.s.touchMode === 'tap' ? this.trackPoint : this.center);
       const on = p?.target && p.target.alive;
       this.mode.onTrack?.(this.ctx, on ? p.target : null, on ? p.part : null);
       for (const t of this.list) t.onCrosshair?.(on && p.target === t);
@@ -624,4 +690,8 @@ export function shade(hex, pct) {
   const f = c => Math.max(0, Math.min(255, Math.round(c * (1 + pct / 100))));
   const r = f(n >> 16), g = f((n >> 8) & 255), b = f(n & 255);
   return '#' + ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0');
+}
+
+export function isTouchDevice() {
+  return matchMedia('(pointer: coarse)').matches || ('ontouchstart' in window && navigator.maxTouchPoints > 0 && !matchMedia('(pointer: fine)').matches);
 }

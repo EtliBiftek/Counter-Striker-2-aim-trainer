@@ -3,7 +3,11 @@ name = "tetik-desktop"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "Tetik Aim desktop app (Tauri)"
+description = "Tetik Aim app (Tauri): desktop and Android"
+
+[lib]
+name = "tetik_app_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }

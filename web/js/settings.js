@@ -19,6 +19,8 @@ export const DEFAULTS = {
   shotVolume: 0.35,
   hitSound: 'tink',
   name: '',
+  touchMode: 'tap',   // 'tap' = shoot where you touch, 'drag' = drag to aim + fire button
+  touchSens: 0.2,     // degrees per pixel of finger movement (drag mode)
   xh: {
     style: 'classic',
     color: '#4dff6a',
@@ -35,7 +37,10 @@ export const M_YAW = 0.022; // CS2 degrees per mouse count at sensitivity 1
 
 export function load() {
   try {
-    const s = JSON.parse(localStorage.getItem(KEY) || '{}');
+    const raw = localStorage.getItem(KEY);
+    const s = JSON.parse(raw || '{}');
+    // Phones: lower render resolution by default.
+    if (!raw && matchMedia('(pointer: coarse)').matches) s.renderScale = 0.75;
     return { ...structuredClone(DEFAULTS), ...s, xh: { ...DEFAULTS.xh, ...(s.xh || {}) } };
   } catch {
     return structuredClone(DEFAULTS);

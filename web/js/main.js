@@ -22,6 +22,8 @@ try {
 $('loading').classList.add('hidden');
 
 let current = null; // current mode
+document.body.classList.toggle('touch', engine.isTouch);
+if (engine.isTouch) $('foot-hint').textContent = 'Dokun: ateş · ❚❚: duraklat · Kontrol şeklini Ayarlar → Dokunmatik bölümünden değiştir';
 let lastResult = null;
 let filter = 'Tümü';
 const xcanvas = $('crosshair');
@@ -31,6 +33,7 @@ const xcanvas = $('crosshair');
 function showMenu() {
   engine.stop();
   current = null;
+  document.body.classList.remove('playing');
   for (const id of ['hud', 'pause', 'results']) $(id).classList.add('hidden');
   $('menu').classList.remove('hidden');
   renderModes();
@@ -87,9 +90,11 @@ async function play(id) {
   $('hud').classList.remove('hidden');
   $('hud-extra').textContent = '';
   $('hud-fps').classList.toggle('hidden', !S.showFps);
+  $('fire-btn').classList.toggle('hidden', !(engine.isTouch && S.touchMode === 'drag'));
+  document.body.classList.add('playing');
   engine.start(current);
   const ok = await engine.lock();
-  if (!ok || document.pointerLockElement !== engine.canvas) engine.pause();
+  if (!ok || (!engine.isTouch && document.pointerLockElement !== engine.canvas)) engine.pause();
 }
 
 async function resume() {
@@ -116,7 +121,7 @@ engine.on('popup', (text, cls) => {
 let hudT = 0;
 engine.on('frame', dt => {
   const playing = ['play', 'countdown', 'paused'].includes(engine.state);
-  xhair.draw(xcanvas, S.xh, { hidden: !playing || current?.rounds, marker: S.xh.hitmarker ? engine.marker : 0, markerHead: engine.markerHead });
+  xhair.draw(xcanvas, S.xh, { hidden: !playing || current?.rounds || (engine.isTouch && S.touchMode === 'tap'), marker: S.xh.hitmarker ? engine.marker : 0, markerHead: engine.markerHead });
   hudT += dt;
   if (!playing || hudT < 0.08) return;
   hudT = 0;
@@ -131,10 +136,15 @@ engine.on('frame', dt => {
 
 engine.on('end', res => {
   $('hud').classList.add('hidden');
+  document.body.classList.remove('playing');
   showResults(res);
 });
 
 $('btn-resume').onclick = resume;
+$('pause-btn').onclick = () => engine.pause();
+const fire = $('fire-btn');
+fire.addEventListener('touchstart', e => { e.preventDefault(); fire.classList.add('down'); engine.fireButton(true); }, { passive: false });
+for (const ev of ['touchend', 'touchcancel']) fire.addEventListener(ev, e => { e.preventDefault(); fire.classList.remove('down'); engine.fireButton(false); });
 $('pause').addEventListener('click', e => { if (e.target === $('pause')) resume(); });
 $('btn-restart').onclick = () => play(current.id);
 $('btn-end').onclick = () => engine.finish();
@@ -332,6 +342,8 @@ function bindAll() {
   bind('a-master', () => S.volume, v => { S.volume = v; }, 'a-master-v');
   bind('a-shot', () => S.shotVolume, v => { S.shotVolume = v; }, 'a-shot-v');
   bind('a-hit', () => S.hitSound, v => { S.hitSound = v; });
+  bind('t-mode', () => S.touchMode, v => { S.touchMode = v; });
+  bind('t-sens', () => S.touchSens, v => { S.touchSens = v; }, 't-sens-v');
   bound = true;
   applySettings();
 }

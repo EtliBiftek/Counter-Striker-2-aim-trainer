@@ -1,7 +1,11 @@
 # Tetik Aim
 
-CS2 hissiyatında, Aim Lab tarzı aim antrenmanı. Hem tarayıcıda (web sitesi) hem de
-masaüstü uygulaması olarak çalışır. Oyun HTML/CSS/JS (Three.js) ile yazıldı;
+CS2 hissiyatında, Aim Lab tarzı aim antrenmanı. Tarayıcıda (web sitesi), Windows
+uygulaması olarak ve Android'de (dokunmatik kontrollerle) çalışır.
+
+- **Tarayıcıda oyna:** https://etlibiftek.github.io/Counter-Striker-2-aim-trainer/
+- **İndir (Windows .exe, Android .apk):** [Releases](../../releases/latest)
+ Oyun HTML/CSS/JS (Three.js) ile yazıldı;
 sunucu, masaüstü uygulaması ve skor doğrulama Rust ile.
 
 ## Özellikler
@@ -17,7 +21,20 @@ sunucu, masaüstü uygulaması ve skor doğrulama Rust ile.
 - Mermi izleri, vuruş parçacıkları, 3 ortam teması (kum, gece, laboratuvar).
 - Sonuç ekranı: skor, isabet, öldürme/sn, reaksiyon süresi, kafa oranı, seri,
   rekor karşılaştırması, son 20 oyunun grafiği ve ipucu.
-- İstatistik sayfası ve **liderlik tablosu** (sunucuda çevrimiçi, uygulamada yerel).
+- İstatistik sayfası ve **liderlik tablosu** (Rust sunucuda çevrimiçi; uygulamada,
+  APK'da ve GitHub Pages sitesinde cihazda yerel).
+
+## Dokunmatik ekran (telefon / tablet)
+
+Dokunmatik cihaz otomatik algılanır. Ayarlar → Dokunmatik bölümünden iki kontrol şekli seçilir:
+
+- **Dokunduğun yere ateş** (varsayılan): hedefe parmağınla dokun. Takip modlarında
+  parmağını hedefin üzerinde tut.
+- **Sürükle-nişan + ateş butonu**: mobil FPS gibi. Ekranı sürükleyerek bak, sağ alttaki
+  **ATEŞ** butonuyla ateş et (takip modlarında basılı tut). Sürükleme hassasiyeti ayarlanır.
+
+Oyun yatay ekranda oynanır; tarayıcıda tam ekrana geçer, dikey tutulursa uyarı çıkar.
+Sol üstteki ❚❚ butonu duraklatır. Telefonlarda çözünürlük ölçeği varsayılan olarak %75'tir.
 
 ## Modlar (12)
 
@@ -58,6 +75,19 @@ Ortam değişkenleri: `TETIK_ADDR` (varsayılan `0.0.0.0:8080`), `TETIK_WEB` (`w
 o zaman liderlik tablosu tarayıcıda yerel tutulur. Dosyayı doğrudan açmak (`file://`)
 çalışmaz, çünkü tarayıcılar ES modüllerini bir sunucu olmadan yüklemez.
 
+### Hazır dosyalar
+
+- **Windows:** Releases sayfasındaki `-setup.exe` (kurulum), `.msi` ya da `-portable.exe`
+  (kurulumsuz; WebView2 gerekir, Windows 10/11'de hazır gelir).
+- **Android:** Releases sayfasındaki `.apk`. Telefonda "bilinmeyen kaynaklardan yükleme"
+  izni gerekebilir.
+
+`v*` etiketi gönderildiğinde `.github/workflows/release.yml` ikisini de derler ve sürüme ekler.
+APK'yı sabit bir anahtarla imzalamak için repo Secrets'a `ANDROID_KEYSTORE_B64`
+(base64 `.jks`, alias `tetik`) ve `ANDROID_KEYSTORE_PASSWORD` eklenebilir; eklenmezse her
+sürüm geçici bir anahtarla imzalanır (o zaman yeni sürüm için eski uygulamayı kaldırıp kurmak gerekir).
+Site her `main` push'unda `.github/workflows/pages.yml` ile GitHub Pages'e yayınlanır.
+
 ### Masaüstü uygulaması (Tauri)
 
 Aynı oyun yerel bir pencerede; skorlar uygulama veri klasöründe saklanır.
@@ -74,15 +104,26 @@ cd desktop && cargo tauri build
 ```
 
 Gereksinimler: Windows'ta WebView2 (Windows 10/11'de hazır gelir). Linux'ta
-`libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev`. macOS paketi için önce
-`cargo tauri icon icons/icon.png` ile `.icns` üret.
+`libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev`.
+
+### Android (Tauri)
+
+Android SDK, NDK 27 ve Rust Android hedefleri gerekir (`ANDROID_HOME`, `NDK_HOME`):
+
+```sh
+rustup target add aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android
+cd desktop && cargo tauri android build --apk
+```
+
+Android projesi `desktop/gen/android` içindedir (yatay ekran, tam ekran, ekran açık kalır:
+`AndroidManifest.xml`, `MainActivity.kt`).
 
 ## Yapı
 
 ```
 core/      Rust: modlar, skor doğrulama, JSON liderlik deposu (birim testli)
 server/    Rust: axum web sunucusu + API
-desktop/   Rust: Tauri masaüstü uygulaması
+desktop/   Rust: Tauri uygulaması (Windows/Linux/macOS + Android, gen/android)
 web/       HTML/CSS/JS oyun (Three.js, vendor/ içinde)
   js/engine.js     sahne, CS2 fare hesabı, atış/ışın testi, oyun döngüsü
   js/modes.js      12 mod
