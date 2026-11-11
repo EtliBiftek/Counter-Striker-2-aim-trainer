@@ -62,9 +62,12 @@ jobs:
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;$NDK_VERSION" "build-tools;34.0.0" "platforms;android-34" > /dev/null
           echo "NDK_HOME=$ANDROID_HOME/ndk/$NDK_VERSION" >> "$GITHUB_ENV"
+      - name: Tauri CLI
+        # The Gradle project in desktop/gen/android calls `cargo tauri`.
+        run: cargo install tauri-cli --version "^2" --locked
       - name: Build APK
         working-directory: desktop
-        run: npx --yes @tauri-apps/cli@^2 android build --apk --ci
+        run: cargo tauri android build --apk --ci
       - name: Sign APK
         env:
           KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
