@@ -1,0 +1,14 @@
+[package]
+name = "tetik-server"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Web server for Tetik Aim: serves the game and the leaderboard API"
+
+[dependencies]
+tetik-core = { path = "../core" }
+serde.workspace = true
+serde_json.workspace = true
+axum = "0.8"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "sync", "signal"] }
+tower-http = { version = "0.6", features = ["fs", "set-header"] }

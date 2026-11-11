@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tetik Aim · Aim Antrenmanı</title>
+  <link rel="icon" href="favicon.png">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <canvas id="game"></canvas>
+  <canvas id="crosshair"></canvas>
+
+  <!-- In-game HUD -->
+  <div id="hud" class="hidden">
+    <div class="hud-top">
+      <div class="hud-box"><span class="lbl">SKOR</span><span id="hud-score">0</span></div>
+      <div class="hud-box timer"><span id="hud-time">60.0</span></div>
+      <div class="hud-box"><span class="lbl">İSABET</span><span id="hud-acc">100%</span></div>
+    </div>
+    <div class="hud-left">
+      <div><span class="lbl">SERİ</span> <b id="hud-streak">0</b></div>
+      <div><span class="lbl">VURUŞ</span> <b id="hud-hits">0</b></div>
+      <div id="hud-extra"></div>
+    </div>
+    <div id="hud-fps" class="hud-fps hidden"></div>
+    <div id="popups"></div>
+    <div id="center-msg"></div>
+  </div>
+
+  <!-- Pause -->
+  <div id="pause" class="overlay hidden">
+    <div class="panel small">
+      <h2>Duraklatıldı</h2>
+      <p class="muted">Devam etmek için tıkla.</p>
+      <div class="row gap">
+        <button id="btn-resume" class="primary">Devam</button>
+        <button id="btn-restart">Yeniden Başlat (R)</button>
+        <button id="btn-end">Bitir</button>
+        <button id="btn-quit">Menü</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div id="results" class="overlay hidden">
+    <div class="panel wide">
+      <div class="res-head">
+        <div>
+          <div class="muted" id="res-mode">MOD</div>
+          <div class="res-score" id="res-score">0</div>
+          <div id="res-pb" class="pb"></div>
+        </div>
+        <div class="res-actions">
+          <button id="res-again" class="primary">Tekrar (R)</button>
+          <button id="res-menu">Menü (Esc)</button>
+        </div>
+      </div>
+      <div class="stat-grid" id="res-stats"></div>
+      <div class="res-cols">
+        <div>
+          <h3>Gelişim (son 20)</h3>
+          <canvas id="res-chart" width="520" height="180"></canvas>
+          <div id="res-tip" class="tip"></div>
+        </div>
+        <div>
+          <h3>Liderlik Tablosu <span class="muted small" id="res-backend"></span></h3>
+          <div class="row gap">
+            <input id="res-name" maxlength="20" placeholder="Takma ad">
+            <button id="res-submit" class="primary">Gönder</button>
+          </div>
+          <div id="res-submit-msg" class="muted small"></div>
+          <table class="lb" id="res-lb"></table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main menu -->
+  <div id="menu" class="overlay">
+    <header class="topbar">
+      <div class="logo"><img src="icon.png" alt=""><span>TETİK</span><em>AIM</em></div>
+      <nav>
+        <button class="tab active" data-tab="modes">Modlar</button>
+        <button class="tab" data-tab="settings">Ayarlar</button>
+        <button class="tab" data-tab="stats">İstatistikler</button>
+        <button class="tab" data-tab="board">Liderlik</button>
+      </nav>
+      <div class="sens-chip" id="sens-chip"></div>
+    </header>
+
+    <section class="page" id="page-modes">
+      <div class="filters" id="mode-filters"></div>
+      <div class="mode-grid" id="mode-grid"></div>
+      <div class="foot muted small">
+        Sol tık: ateş · Esc: duraklat · R: yeniden başlat · Hassasiyet CS2 ile birebir (m_yaw 0.022)
+      </div>
+    </section>
+
+    <section class="page hidden" id="page-settings">
+      <div class="settings">
+        <div class="card">
+          <h3>Fare</h3>
+          <label>CS2 hassasiyeti <input type="number" id="s-sens" step="0.01" min="0.01" max="20"></label>
+          <label>DPI <input type="number" id="s-dpi" step="50" min="100" max="32000"></label>
+          <div class="muted small" id="s-sens-info"></div>
+          <label class="check"><input type="checkbox" id="s-raw"> Ham girdi (fare ivmesi kapalı)</label>
+          <label>Görüş alanı
+            <select id="s-fovmode">
+              <option value="cs2">CS2 (4:3'te 90°)</option>
+              <option value="custom">Özel yatay FOV</option>
+            </select>
+          </label>
+          <label id="s-fov-wrap">Yatay FOV <input type="range" id="s-fov" min="60" max="130" step="1"><span id="s-fov-v"></span></label>
+        </div>
+
+        <div class="card">
+          <h3>Nişangah</h3>
+          <canvas id="xh-preview" width="220" height="140"></canvas>
+          <label>Stil
+            <select id="x-style">
+              <option value="classic">Klasik</option>
+              <option value="classic-dot">Klasik + Nokta</option>
+              <option value="t">T Şekli</option>
+              <option value="dot">Sadece Nokta</option>
+              <option value="circle">Daire</option>
+            </select>
+          </label>
+          <label>Renk <input type="color" id="x-color"></label>
+          <label>Uzunluk <input type="range" id="x-len" min="0" max="20" step="0.5"><span id="x-len-v"></span></label>
+          <label>Kalınlık <input type="range" id="x-thick" min="0.5" max="6" step="0.5"><span id="x-thick-v"></span></label>
+          <label>Boşluk <input type="range" id="x-gap" min="-4" max="12" step="0.5"><span id="x-gap-v"></span></label>
+          <label>Saydamlık <input type="range" id="x-alpha" min="0.2" max="1" step="0.05"><span id="x-alpha-v"></span></label>
+          <label class="check"><input type="checkbox" id="x-outline"> Dış çizgi</label>
+          <label class="check"><input type="checkbox" id="x-hitmarker"> Vuruş işareti</label>
+          <details>
+            <summary>CS2 ayarlarından içe aktar</summary>
+            <p class="muted small">Konsol komutlarını yapıştır (ör. <code>sensitivity 1.2; cl_crosshairsize 2; cl_crosshairgap -2 ...</code>). Nişangah değerleri yaklaşık çevrilir.</p>
+            <textarea id="x-import" rows="4"></textarea>
+            <button id="x-import-btn">İçe aktar</button>
+            <span id="x-import-msg" class="muted small"></span>
+          </details>
+        </div>
+
+        <div class="card">
+          <h3>Oyun</h3>
+          <label>Süre
+            <select id="s-duration">
+              <option value="30">30 sn</option>
+              <option value="60">60 sn</option>
+              <option value="90">90 sn</option>
+            </select>
+          </label>
+          <label>Hedef rengi <input type="color" id="s-tcolor"></label>
+          <label>Hedef boyutu <input type="range" id="s-tsize" min="0.6" max="1.5" step="0.05"><span id="s-tsize-v"></span></label>
+          <label>Ortam
+            <select id="s-theme">
+              <option value="dust">Kum (sıcak)</option>
+              <option value="night">Gece</option>
+              <option value="lab">Laboratuvar</option>
+            </select>
+          </label>
+          <label class="check"><input type="checkbox" id="s-countdown"> Başlamadan geri sayım</label>
+          <label class="check"><input type="checkbox" id="s-fps"> FPS göster</label>
+          <label>Çözünürlük ölçeği <input type="range" id="s-scale" min="0.5" max="1" step="0.05"><span id="s-scale-v"></span></label>
+        </div>
+
+        <div class="card">
+          <h3>Ses</h3>
+          <label>Ana ses <input type="range" id="a-master" min="0" max="1" step="0.05"><span id="a-master-v"></span></label>
+          <label>Silah sesi <input type="range" id="a-shot" min="0" max="1" step="0.05"><span id="a-shot-v"></span></label>
+          <label>Vuruş sesi
+            <select id="a-hit">
+              <option value="tink">Metalik (kafa)</option>
+              <option value="pop">Pop</option>
+              <option value="click">Tık</option>
+              <option value="off">Kapalı</option>
+            </select>
+          </label>
+          <button id="a-test">Sesi dene</button>
+          <hr>
+          <button id="s-reset" class="danger">Ayarları sıfırla</button>
+          <button id="s-wipe" class="danger">Yerel istatistikleri sil</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="page hidden" id="page-stats">
+      <div class="stats-summary" id="stats-summary"></div>
+      <table class="lb wide" id="stats-table"></table>
+    </section>
+
+    <section class="page hidden" id="page-board">
+      <div class="row gap">
+        <select id="board-mode"></select>
+        <span class="muted small" id="board-backend"></span>
+      </div>
+      <table class="lb wide" id="board-table"></table>
+    </section>
+  </div>
+
+  <div id="loading" class="overlay"><div class="muted">Yükleniyor…</div></div>
+
+  <script>
+    // Show startup errors instead of an endless loading screen.
+    window.addEventListener('error', e => {
+      const l = document.getElementById('loading');
+      if (l && !l.classList.contains('hidden')) l.innerHTML = '<div class="panel small"><h2>Başlatma hatası</h2><p class="muted"></p></div>', l.querySelector('p').textContent = e.message || String(e.error);
+    });
+  </script>
+  <script type="module" src="js/main.js" onerror="dispatchEvent(new ErrorEvent('error', { message: 'js/main.js yüklenemedi' }))"></script>
+</body>
+</html>

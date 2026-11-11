@@ -1,0 +1,10 @@
+[package]
+name = "tetik-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Shared logic for Tetik Aim: modes, score validation, leaderboard store"
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
