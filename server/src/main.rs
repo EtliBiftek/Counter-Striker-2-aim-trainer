@@ -83,8 +83,14 @@ fn env_or(key: &str, default: &str) -> String {
 #[derive(Deserialize)]
 struct LbQuery {
     mode: String,
+    #[serde(default = "normal")]
+    difficulty: String,
     #[serde(default = "default_limit")]
     limit: usize,
+}
+
+fn normal() -> String {
+    "normal".to_string()
 }
 
 fn default_limit() -> usize {
@@ -92,11 +98,13 @@ fn default_limit() -> usize {
 }
 
 async fn leaderboard(State(app): State<Shared>, Query(q): Query<LbQuery>) -> Response {
-    if tetik_core::mode(&q.mode).is_none() {
+    if tetik_core::mode(&q.mode).is_none()
+        || !tetik_core::DIFFICULTIES.contains(&q.difficulty.as_str())
+    {
         return error(StatusCode::NOT_FOUND, "Bilinmeyen mod");
     }
     let store = app.store.lock().await;
-    Json(store.board().top(&q.mode, q.limit.min(100))).into_response()
+    Json(store.board().top(&q.mode, &q.difficulty, q.limit.min(100))).into_response()
 }
 
 async fn submit(

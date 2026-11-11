@@ -1,7 +1,7 @@
 {
-  "name": "Tetik Aim",
-  "short_name": "Tetik Aim",
-  "description": "CS2 hissiyatında aim antrenmanı",
+  "name": "Tetik",
+  "short_name": "Tetik",
+  "description": "CS2 ayarlarıyla aim antrenmanı",
   "start_url": "./",
   "display": "fullscreen",
   "orientation": "landscape",

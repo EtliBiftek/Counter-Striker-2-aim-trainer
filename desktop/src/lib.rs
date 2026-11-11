@@ -17,10 +17,12 @@ fn submit_score(state: tauri::State<'_, Local>, entry: Submission) -> Result<Sub
 fn leaderboard(
     state: tauri::State<'_, Local>,
     mode: String,
+    difficulty: Option<String>,
     limit: usize,
 ) -> Result<Vec<Entry>, String> {
     let store = state.0.lock().map_err(|e| e.to_string())?;
-    Ok(store.board().top(&mode, limit.min(100)))
+    let difficulty = difficulty.unwrap_or_else(|| "normal".into());
+    Ok(store.board().top(&mode, &difficulty, limit.min(100)))
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

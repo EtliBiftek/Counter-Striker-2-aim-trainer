@@ -21,9 +21,9 @@ export async function backend() {
 }
 
 export const BACKEND_LABEL = {
-  desktop: 'yerel (uygulama)',
-  server: 'çevrimiçi',
-  local: 'yerel (tarayıcı)',
+  desktop: 'bu cihaz',
+  server: 'sunucu',
+  local: 'bu tarayıcı',
 };
 
 export async function submit(entry) {
@@ -42,15 +42,17 @@ export async function submit(entry) {
   return localSubmit(entry);
 }
 
-export async function top(mode, limit = 20) {
+const key = (mode, difficulty) => (difficulty && difficulty !== 'normal' ? `${mode}@${difficulty}` : mode);
+
+export async function top(mode, difficulty = 'normal', limit = 20) {
   const b = await backend();
-  if (b === 'desktop') return tauri.invoke('leaderboard', { mode, limit });
+  if (b === 'desktop') return tauri.invoke('leaderboard', { mode, difficulty, limit });
   if (b === 'server') {
-    const r = await fetch(`api/leaderboard?mode=${encodeURIComponent(mode)}&limit=${limit}`, { cache: 'no-store' });
+    const r = await fetch(`api/leaderboard?mode=${encodeURIComponent(mode)}&difficulty=${difficulty}&limit=${limit}`, { cache: 'no-store' });
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     return r.json();
   }
-  return (localBoard()[mode] || []).slice(0, limit);
+  return (localBoard()[key(mode, difficulty)] || []).slice(0, limit);
 }
 
 function localBoard() {
@@ -61,12 +63,13 @@ function localSubmit(e) {
   const name = String(e.name || '').trim().replace(/\s+/g, ' ');
   if (!name || name.length > 20) throw new Error('Geçersiz isim (1-20 karakter)');
   const board = localBoard();
-  const list = board[e.mode] || [];
+  const k = key(e.mode, e.difficulty);
+  const list = board[k] || [];
   const entry = { ...e, name, at: Math.floor(Date.now() / 1000) };
   let pos = list.findIndex(x => x.score < e.score);
   if (pos < 0) pos = list.length;
   list.splice(pos, 0, entry);
-  board[e.mode] = list.slice(0, 200);
+  board[k] = list.slice(0, 200);
   localStorage.setItem(LOCAL_KEY, JSON.stringify(board));
-  return { rank: pos < 200 ? pos + 1 : null, total: board[e.mode].length, best: board[e.mode][0].score };
+  return { rank: pos < 200 ? pos + 1 : null, total: board[k].length, best: board[k][0].score };
 }

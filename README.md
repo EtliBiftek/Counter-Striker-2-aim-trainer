@@ -1,144 +1,104 @@
-# Tetik Aim
+# Tetik
 
-CS2 hissiyatında, Aim Lab tarzı aim antrenmanı. Tarayıcıda (web sitesi), Windows
-uygulaması olarak ve Android'de (dokunmatik kontrollerle) çalışır.
+CS2 ayarlarıyla çalışan aim antrenmanı. Tarayıcıda, Windows'ta ve Android'de oynanır.
 
-- **Tarayıcıda oyna:** https://etlibiftek.github.io/Counter-Striker-2-aim-trainer/
-- **İndir (Windows .exe, Android .apk):** [Releases](../../releases/latest)
- Oyun HTML/CSS/JS (Three.js) ile yazıldı;
-sunucu, masaüstü uygulaması ve skor doğrulama Rust ile.
+**Oyna:** https://etlibiftek.github.io/Counter-Striker-2-aim-trainer/
+**İndir:** [Releases](../../releases/latest) (Windows `.exe`, Android `.apk`)
 
-## Özellikler
+![Alan Temizle modu](docs/oyun.png)
 
-- **CS2 ile birebir hassasiyet**: `m_yaw 0.022`, CS2 hassasiyet değerini aynen gir.
-  DPI'a göre eDPI ve cm/360 gösterilir. Ham girdi (fare ivmesi kapalı) desteklenir.
-- **CS2 görüş alanı**: 4:3'te 90° yatay, geniş ekranda Hor+ (CS2 gibi). İstersen özel FOV.
-- **Gerçek ölçekler**: göz yüksekliği 64u ≈ 1.64 m, rakip 1.83 m, kafa ≈ 25 cm çap.
-- **Nişangah editörü**: klasik / nokta / T / daire, renk, uzunluk, kalınlık, boşluk,
-  dış çizgi, vuruş işareti. **CS2 konsol ayarlarını yapıştırarak içe aktarma**
-  (`sensitivity`, `cl_crosshairsize`, `cl_crosshairgap`, `cl_crosshaircolor_r/g/b` …).
-- **Sentezlenmiş sesler** (dosya yok): silah sesi, kafa vuruşu "tink", vuruş sesleri.
-- Mermi izleri, vuruş parçacıkları, 3 ortam teması (kum, gece, laboratuvar).
-- Sonuç ekranı: skor, isabet, öldürme/sn, reaksiyon süresi, kafa oranı, seri,
-  rekor karşılaştırması, son 20 oyunun grafiği ve ipucu.
-- İstatistik sayfası ve **liderlik tablosu** (Rust sunucuda çevrimiçi; uygulamada,
-  APK'da ve GitHub Pages sitesinde cihazda yerel).
+## CS2 ile aynı olanlar
 
-## Dokunmatik ekran (telefon / tablet)
+- Hassasiyet: CS2'deki `sensitivity` değerini aynen gir (`m_yaw 0.022`). DPI'a göre
+  eDPI ve 360° için gereken cm gösterilir.
+- Görüş alanı: 4:3'te 90°, geniş ekranda CS2 gibi yanlara açılır.
+- Nişangah: `cl_crosshairsize`, `cl_crosshairthickness`, `cl_crosshairgap`, dış çizgi,
+  nokta, T şekli. CS2'deki **nişangah paylaşım kodu** (`CSGO-xxxxx-…`) ya da konsol
+  komutları / `config.cfg` satırları yapıştırılarak aktarılır.
+- Ölçüler: göz yüksekliği 64 birim (1.64 m), rakip 1.83 m. Kafa tek mermi, gövde iki,
+  bacak üç.
 
-Dokunmatik cihaz otomatik algılanır. Ayarlar → Dokunmatik bölümünden iki kontrol şekli seçilir:
+## Modlar
 
-- **Dokunduğun yere ateş** (varsayılan): hedefe parmağınla dokun. Takip modlarında
-  parmağını hedefin üzerinde tut.
-- **Sürükle-nişan + ateş butonu**: mobil FPS gibi. Ekranı sürükleyerek bak, sağ alttaki
-  **ATEŞ** butonuyla ateş et (takip modlarında basılı tut). Sürükleme hassasiyeti ayarlanır.
+| Grup | Mod | Ne çalıştırır |
+|------|-----|---------------|
+| CS | Kafa Avı | 10–32 m'de beliren, bir kısmı strafe atan rakipler |
+| CS | Köşe Tutma | beton blok arkasından swing/jiggle peek, ayak sesiyle |
+| CS | Geçiş | 3 m'lik boşluktan koşarak geçen rakipler |
+| CS | Uzak Mesafe | 35–58 m, tek mermiyle kafa |
+| CS | Alan Temizle | aynı anda 3–5 rakiplik dalgalar, temizleme süresi |
+| CS | Sprey Kontrol | 30'luk şarjör, geri tepme desenini çelik hedefte telafi |
+| Flick | Izgara, Merkez Flick, Hareketli Hedefler | |
+| Hassasiyet | Hassas Altılı, Mikro Flick | |
+| Takip | Pürüzsüz Takip, Strafe Takip | sol tık basılı, hedefte kalınan süre |
+| Hız | Küçülen Hedefler, Hedef Seçimi | |
+| Reaksiyon | Reaksiyon | 10 tur |
 
-Oyun yatay ekranda oynanır; tarayıcıda tam ekrana geçer, dikey tutulursa uyarı çıkar.
-Sol üstteki ❚❚ butonu duraklatır. Telefonlarda çözünürlük ölçeği varsayılan olarak %75'tir.
+Her modun Kolay / Normal / Zor seviyesi var; rekorlar ve sıralama seviyeye göre ayrı
+tutulur. **Programlar** birkaç modu arka arkaya oynatır (Isınma, CS Rutini,
+Hassasiyet, Hız).
 
-## Modlar (12)
+Klavye: menüde ↑↓ mod seçer, ←→ zorluğu değiştirir, Enter başlatır. Oyunda Esc
+duraklatır, R baştan başlatır.
 
-| Mod | Tür | Ne çalıştırır |
-|-----|-----|---------------|
-| Izgara | Flick | 5×5 ızgarada aynı anda 3 hedef |
-| Hassas Altılı | Hassasiyet | 6 küçük hedef, her mermi önemli |
-| Merkez Flick | Flick | merkez ↔ rastgele hedef, flick + geri dönüş |
-| Mikro Flick | Hassasiyet | çok küçük, birbirine yakın hedefler |
-| Hareketli Hedefler | Flick | kayan hedeflere flick |
-| Küçülen Hedefler | Hız | küçülerek kaybolan hedefler, artan tempo |
-| Hedef Seçimi | Karar | düşman (kırmızı küre) / dost (mavi küp) ayrımı |
-| Pürüzsüz Takip | Takip | basılı tut, yön değiştiren küreyi takip et |
-| Strafe Takip | Takip | ADAD strafe atan rakibi takip (kafa 1.5×) |
-| Kafa Avı | CS | farklı mesafelerde beliren rakipler, kafa tek mermi |
-| Köşe Tutma | CS | duvar arkasından peek atan rakipler, açı tutma |
-| Reaksiyon | Reaksiyon | 10 tur, yeşile dönünce tıkla |
+Dokunmatik ekranda iki seçenek var (Ayarlar → Gelişmiş → Dokunmatik): dokunduğun
+yere ateş, ya da sürükleyerek nişan alıp ateş butonuyla atış.
 
-Kısayollar: **Sol tık** ateş · **Esc** duraklat · **R** yeniden başlat · **F11** tam ekran.
+![Menü](docs/menu.png)
 
 ## Çalıştırma
 
-### Web sitesi (Rust sunucu)
+Site, Rust sunucuyla (çevrimiçi sıralama):
 
 ```sh
-cargo run --release -p tetik-server
-# http://localhost:8080
+cargo run --release -p tetik-server   # http://localhost:8080
 ```
 
-Ortam değişkenleri: `TETIK_ADDR` (varsayılan `0.0.0.0:8080`), `TETIK_WEB` (`web`),
-`TETIK_DATA` (`data/scores.json`). Sunucu `web/` klasörünü sunar ve şu API'yi verir:
+`TETIK_ADDR`, `TETIK_WEB`, `TETIK_DATA` ortam değişkenleri adres, oyun klasörü ve skor
+dosyasını belirler. API: `GET /api/leaderboard?mode=kafa&difficulty=normal`,
+`POST /api/scores` (skorlar sunucuda doğrulanır).
 
-- `GET /api/health`, `GET /api/modes`
-- `GET /api/leaderboard?mode=kafa&limit=20`
-- `POST /api/scores` (skorlar Rust tarafında doğrulanır, IP başına 5 sn sınır)
+`web/` klasörü statik olarak da yayınlanabilir; o zaman sıralama tarayıcıda tutulur.
+GitHub Pages "Deploy from a branch" (`main`, kök) ile yayınlanıyor: kökteki
+`index.html` oyuna yönlendirir.
 
-`web/` klasörü tek başına statik olarak da (GitHub Pages, Netlify …) yayınlanabilir;
-o zaman liderlik tablosu tarayıcıda yerel tutulur. Dosyayı doğrudan açmak (`file://`)
-çalışmaz, çünkü tarayıcılar ES modüllerini bir sunucu olmadan yüklemez.
-
-### Hazır dosyalar
-
-- **Windows:** Releases sayfasındaki `-setup.exe` (kurulum), `.msi` ya da `-portable.exe`
-  (kurulumsuz; WebView2 gerekir, Windows 10/11'de hazır gelir).
-- **Android:** Releases sayfasındaki `.apk`. Telefonda "bilinmeyen kaynaklardan yükleme"
-  izni gerekebilir.
-
-`v*` etiketi gönderildiğinde `.github/workflows/release.yml` ikisini de derler ve sürüme ekler.
-APK'yı sabit bir anahtarla imzalamak için repo Secrets'a `ANDROID_KEYSTORE_B64`
-(base64 `.jks`, alias `tetik`) ve `ANDROID_KEYSTORE_PASSWORD` eklenebilir; eklenmezse her
-sürüm geçici bir anahtarla imzalanır (o zaman yeni sürüm için eski uygulamayı kaldırıp kurmak gerekir).
-Site GitHub Pages'te "Deploy from a branch" (`main`, `/ (root)`) ile yayınlanır: kökteki
-`index.html` oyuna (`web/`) yönlendirir, `.nojekyll` README'nin sayfa olarak işlenmesini engeller.
-
-### Masaüstü uygulaması (Tauri)
-
-Aynı oyun yerel bir pencerede; skorlar uygulama veri klasöründe saklanır.
+Masaüstü (Tauri; Windows'ta WebView2 gerekir, Windows 10/11'de hazır gelir):
 
 ```sh
 cargo run --release -p tetik-desktop
+cd desktop && cargo tauri build          # kurulum dosyası
 ```
 
-Kurulum paketi (Windows `.msi`/`.exe`, Linux `.deb`/`.AppImage`) için:
+Android (SDK, NDK 27 ve Rust Android hedefleri gerekir):
 
 ```sh
-cargo install tauri-cli --version "^2"
-cd desktop && cargo tauri build
-```
-
-Gereksinimler: Windows'ta WebView2 (Windows 10/11'de hazır gelir). Linux'ta
-`libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev`.
-
-### Android (Tauri)
-
-Android SDK, NDK 27 ve Rust Android hedefleri gerekir (`ANDROID_HOME`, `NDK_HOME`):
-
-```sh
-rustup target add aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android
 cd desktop && cargo tauri android build --apk
 ```
 
-Android projesi `desktop/gen/android` içindedir (yatay ekran, tam ekran, ekran açık kalır:
-`AndroidManifest.xml`, `MainActivity.kt`).
+Sürüm: Actions → Release → Run workflow, etiket olarak `v0.2.0` gibi bir değer gir.
+Windows ve Android dosyaları derlenip Releases'a eklenir. APK'yı sabit bir anahtarla
+imzalamak için Secrets'a `ANDROID_KEYSTORE_B64` (base64 `.jks`, alias `tetik`) ve
+`ANDROID_KEYSTORE_PASSWORD` eklenmeli; yoksa her sürüm geçici bir anahtarla imzalanır
+ve güncellemek için eski sürümü kaldırmak gerekir.
 
 ## Yapı
 
 ```
-core/      Rust: modlar, skor doğrulama, JSON liderlik deposu (birim testli)
-server/    Rust: axum web sunucusu + API
-desktop/   Rust: Tauri uygulaması (Windows/Linux/macOS + Android, gen/android)
-web/       HTML/CSS/JS oyun (Three.js, vendor/ içinde)
-  js/engine.js     sahne, CS2 fare hesabı, atış/ışın testi, oyun döngüsü
-  js/modes.js      12 mod
-  js/crosshair.js  nişangah çizimi
-  js/audio.js      WebAudio sesleri
-  js/settings.js   ayarlar, CS2 içe aktarma, FOV hesabı
-  js/api.js        liderlik: Tauri / sunucu / yerel
-  js/stats.js      geçmiş, rekorlar, grafik
+core/      Rust: mod listesi, skor doğrulama, JSON sıralama deposu
+server/    Rust: axum sunucu
+desktop/   Rust: Tauri uygulaması (masaüstü + gen/android)
+web/       oyun: HTML, CSS, JS (Three.js)
+  js/engine.js     döngü, fare, atış, geri tepme
+  js/world.js      poligon, ışık, hedef panosu, siper
+  js/actors.js     hedefler ve botlar
+  js/viewmodel.js  silah modeli
+  js/modes.js      modlar ve programlar
+  js/audio.js      sesler (WebAudio, dosyasız)
+  js/crosshair.js  nişangah ve CS2 paylaşım kodu
 ```
 
-Yeni mod eklerken `web/js/modes.js` ve `core/src/lib.rs` içindeki `MODES` listesine
-aynı `id` ile ekle.
-
-## Test
+Yeni mod: `web/js/modes.js` ve `core/src/lib.rs` içindeki `MODES` listesine aynı `id`
+ile eklenir.
 
 ```sh
 cargo test --workspace
@@ -147,4 +107,5 @@ cargo clippy --workspace --all-targets -- -D warnings
 
 ## Lisans
 
-MIT. Three.js MIT lisanslıdır (`web/vendor/THREE-LICENSE`).
+MIT. Three.js MIT (`web/vendor/THREE-LICENSE`), Barlow yazı tipi SIL OFL 1.1
+(`web/fonts/OFL.txt`).

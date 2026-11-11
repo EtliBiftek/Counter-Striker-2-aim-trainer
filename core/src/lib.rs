@@ -38,7 +38,27 @@ pub const MODES: &[ModeInfo] = &[
     m("kafa", "Kafa Avı", 3_500, 12),
     m("kose", "Köşe Tutma", 3_500, 12),
     m("reaksiyon", "Reaksiyon", 1_000, 2),
+    m("gecis", "Geçiş", 3_500, 12),
+    m("uzak", "Uzak Mesafe", 3_500, 8),
+    m("temizle", "Alan Temizle", 4_000, 12),
+    m("sprey", "Sprey Kontrol", 400, 12),
 ];
+
+/// Difficulty levels; each has its own leaderboard.
+pub const DIFFICULTIES: &[&str] = &["kolay", "normal", "zor"];
+
+fn default_difficulty() -> String {
+    "normal".to_string()
+}
+
+/// Leaderboard key: the mode id, with `@difficulty` unless normal.
+pub fn board_key(mode: &str, difficulty: &str) -> String {
+    if difficulty == "normal" {
+        mode.to_string()
+    } else {
+        format!("{mode}@{difficulty}")
+    }
+}
 
 const fn m(id: &'static str, name: &'static str, s: u32, h: u32) -> ModeInfo {
     ModeInfo {
@@ -58,6 +78,8 @@ pub fn mode(id: &str) -> Option<&'static ModeInfo> {
 pub struct Submission {
     pub name: String,
     pub mode: String,
+    #[serde(default = "default_difficulty")]
+    pub difficulty: String,
     pub score: u32,
     pub hits: u32,
     pub shots: u32,
@@ -76,6 +98,8 @@ pub struct Submission {
 pub struct Entry {
     pub name: String,
     pub mode: String,
+    #[serde(default = "default_difficulty")]
+    pub difficulty: String,
     pub score: u32,
     pub accuracy: f64,
     pub hits: u32,
@@ -103,7 +127,7 @@ impl std::fmt::Display for Invalid {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(match self {
             Invalid::Name => "Geçersiz isim (1-20 karakter)",
-            Invalid::Mode => "Bilinmeyen mod",
+            Invalid::Mode => "Bilinmeyen mod veya zorluk",
             Invalid::Duration => "Geçersiz süre",
             Invalid::Numbers => "Geçersiz istatistik",
             Invalid::Implausible => "Skor gerçekçi değil",
@@ -129,6 +153,9 @@ pub fn clean_name(name: &str) -> Result<String, Invalid> {
 pub fn validate(s: &Submission, now: u64) -> Result<Entry, Invalid> {
     let name = clean_name(&s.name)?;
     let info = mode(&s.mode).ok_or(Invalid::Mode)?;
+    if !DIFFICULTIES.contains(&s.difficulty.as_str()) {
+        return Err(Invalid::Mode);
+    }
     if !s.duration.is_finite() || !(3.0..=600.0).contains(&s.duration) {
         return Err(Invalid::Duration);
     }
@@ -154,6 +181,7 @@ pub fn validate(s: &Submission, now: u64) -> Result<Entry, Invalid> {
     Ok(Entry {
         name,
         mode: info.id.to_string(),
+        difficulty: s.difficulty.clone(),
         score: s.score,
         accuracy: round1(s.accuracy),
         hits: s.hits,
@@ -189,7 +217,10 @@ pub struct Board {
 
 impl Board {
     pub fn insert(&mut self, e: Entry) -> SubmitResult {
-        let list = self.modes.entry(e.mode.clone()).or_default();
+        let list = self
+            .modes
+            .entry(board_key(&e.mode, &e.difficulty))
+            .or_default();
         // Stable: on equal scores the older entry stays ahead.
         let pos = list.partition_point(|x| x.score >= e.score);
         list.insert(pos, e);
@@ -201,9 +232,9 @@ impl Board {
         }
     }
 
-    pub fn top(&self, mode: &str, limit: usize) -> Vec<Entry> {
+    pub fn top(&self, mode: &str, difficulty: &str, limit: usize) -> Vec<Entry> {
         self.modes
-            .get(mode)
+            .get(&board_key(mode, difficulty))
             .map(|l| l.iter().take(limit).cloned().collect())
             .unwrap_or_default()
     }
@@ -271,6 +302,7 @@ mod tests {
         Submission {
             name: "  Oyuncu   Bir ".into(),
             mode: "izgara".into(),
+            difficulty: "normal".into(),
             score,
             hits: 100,
             shots: 120,
@@ -301,6 +333,9 @@ mod tests {
         s.mode = "yok".into();
         assert_eq!(validate(&s, 0), Err(Invalid::Mode));
         let mut s = sub(1);
+        s.difficulty = "imkansiz".into();
+        assert_eq!(validate(&s, 0), Err(Invalid::Mode));
+        let mut s = sub(1);
         s.hits = 200;
         assert_eq!(validate(&s, 0), Err(Invalid::Numbers));
         let mut s = sub(1);
@@ -323,7 +358,11 @@ mod tests {
         assert_eq!(b.insert(e(30)).rank, Some(1));
         assert_eq!(b.insert(e(20)).rank, Some(2));
         assert_eq!(b.insert(e(20)).rank, Some(3));
-        let scores: Vec<u32> = b.top("izgara", 10).iter().map(|x| x.score).collect();
+        let scores: Vec<u32> = b
+            .top("izgara", "normal", 10)
+            .iter()
+            .map(|x| x.score)
+            .collect();
         assert_eq!(scores, [30, 20, 20, 10]);
         for _ in 0..MAX_ENTRIES_PER_MODE {
             b.insert(e(100));
@@ -332,7 +371,25 @@ mod tests {
         assert_eq!(r.rank, None);
         assert_eq!(r.total, MAX_ENTRIES_PER_MODE);
         assert_eq!(r.best, 100);
-        assert!(b.top("kafa", 5).is_empty());
+        assert!(b.top("kafa", "normal", 5).is_empty());
+    }
+
+    #[test]
+    fn difficulties_have_separate_boards() {
+        let mut b = Board::default();
+        let mut hard = sub(500);
+        hard.difficulty = "zor".into();
+        b.insert(validate(&hard, 0).unwrap());
+        b.insert(validate(&sub(100), 0).unwrap());
+        assert_eq!(b.top("izgara", "zor", 5)[0].score, 500);
+        assert_eq!(b.top("izgara", "normal", 5)[0].score, 100);
+        assert!(b.top("izgara", "kolay", 5).is_empty());
+        // Old files without the field read as normal.
+        let e: Entry = serde_json::from_str(
+            r#"{"name":"a","mode":"kafa","score":1,"accuracy":1,"hits":1,"shots":1,"duration":10,"at":0}"#,
+        )
+        .unwrap();
+        assert_eq!(e.difficulty, "normal");
     }
 
     #[test]
@@ -343,7 +400,7 @@ mod tests {
         let mut st = Store::open(&path).unwrap();
         st.submit(&sub(1234)).unwrap();
         let st2 = Store::open(&path).unwrap();
-        assert_eq!(st2.board().top("izgara", 1)[0].score, 1234);
+        assert_eq!(st2.board().top("izgara", "normal", 1)[0].score, 1234);
         fs::write(&path, b"{not json").unwrap();
         let st3 = Store::open(&path).unwrap();
         assert!(st3.board().modes.is_empty());

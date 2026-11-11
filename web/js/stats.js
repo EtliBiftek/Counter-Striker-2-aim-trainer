@@ -7,20 +7,23 @@ function all() {
   try { return JSON.parse(localStorage.getItem(KEY) || '{}'); } catch { return {}; }
 }
 
+export const runKey = (mode, difficulty) => (difficulty && difficulty !== 'normal' ? `${mode}@${difficulty}` : mode);
+
 export function record(run) {
   const h = all();
-  const list = h[run.mode] || [];
+  const k = runKey(run.mode, run.difficulty);
+  const list = h[k] || [];
   list.push(run);
-  h[run.mode] = list.slice(-MAX_PER_MODE);
+  h[k] = list.slice(-MAX_PER_MODE);
   localStorage.setItem(KEY, JSON.stringify(h));
 }
 
-export function history(mode) {
-  return all()[mode] || [];
+export function history(mode, difficulty = 'normal') {
+  return all()[runKey(mode, difficulty)] || [];
 }
 
-export function best(mode) {
-  return history(mode).reduce((b, r) => (b && b.score >= r.score ? b : r), null);
+export function best(mode, difficulty = 'normal') {
+  return history(mode, difficulty).reduce((b, r) => (b && b.score >= r.score ? b : r), null);
 }
 
 export function summary() {
@@ -44,47 +47,53 @@ export function wipe() {
   localStorage.removeItem(KEY);
 }
 
-/** Small line chart of the last scores, best marked. */
-export function drawChart(canvas, runs, color = '#ffb020') {
+/**
+ * Score history as a thin line with the personal best dashed. `compact`
+ * draws a bare sparkline (menu); otherwise axes labels are added.
+ */
+export function drawChart(canvas, runs, { compact = false, accent = '#f5c400' } = {}) {
   const dpr = window.devicePixelRatio || 1;
   const w = canvas.clientWidth || canvas.width;
   const h = canvas.clientHeight || canvas.height;
-  canvas.width = w * dpr;
-  canvas.height = h * dpr;
+  canvas.width = Math.round(w * dpr);
+  canvas.height = Math.round(h * dpr);
   const g = canvas.getContext('2d');
   g.scale(dpr, dpr);
   g.clearRect(0, 0, w, h);
   const pts = runs.slice(-20);
-  g.font = '12px system-ui';
+  g.font = '500 12px "Barlow Condensed", sans-serif';
   if (pts.length < 2) {
-    g.fillStyle = '#8794a8';
-    g.fillText('Grafik için en az 2 oyun gerekli.', 14, h / 2);
+    g.fillStyle = '#6f6c66';
+    g.fillText(pts.length ? 'TEK KAYIT' : 'KAYIT YOK', 0, h / 2 + 4);
     return;
   }
-  const pad = 26;
-  const max = Math.max(...pts.map(p => p.score)) * 1.08 || 1;
-  const min = Math.min(...pts.map(p => p.score)) * 0.9;
-  const x = i => pad + (i * (w - 2 * pad)) / (pts.length - 1);
-  const y = v => h - pad - ((v - min) * (h - 2 * pad)) / (max - min || 1);
-  g.strokeStyle = 'rgba(255,255,255,.07)';
-  for (let i = 0; i <= 3; i++) {
-    const yy = pad + (i * (h - 2 * pad)) / 3;
-    g.beginPath(); g.moveTo(pad, yy); g.lineTo(w - pad, yy); g.stroke();
+  const padL = compact ? 2 : 44, padR = 4, padY = compact ? 3 : 10;
+  const scores = pts.map(p => p.score);
+  const max = Math.max(...scores), min = Math.min(...scores);
+  const span = max - min || 1;
+  const x = i => padL + (i * (w - padL - padR)) / (pts.length - 1);
+  const y = v => h - padY - ((v - min) * (h - 2 * padY)) / span;
+  if (!compact) {
+    g.fillStyle = '#6f6c66';
+    g.textAlign = 'right';
+    g.fillText(Math.round(max).toLocaleString('tr-TR'), padL - 8, padY + 4);
+    g.fillText(Math.round(min).toLocaleString('tr-TR'), padL - 8, h - padY + 4);
+    g.textAlign = 'left';
+    g.strokeStyle = '#2a2b2d';
+    g.lineWidth = 1;
+    g.beginPath(); g.moveTo(padL, h - padY + 0.5); g.lineTo(w - padR, h - padY + 0.5); g.stroke();
   }
-  const grad = g.createLinearGradient(0, pad, 0, h - pad);
-  grad.addColorStop(0, color + '55');
-  grad.addColorStop(1, color + '00');
+  // Best so far, dashed.
+  g.setLineDash([3, 3]);
+  g.strokeStyle = '#4a4844';
+  g.beginPath(); g.moveTo(padL, y(max) + 0.5); g.lineTo(w - padR, y(max) + 0.5); g.stroke();
+  g.setLineDash([]);
+  g.strokeStyle = '#bdb8ad';
+  g.lineWidth = 1.25;
   g.beginPath();
   pts.forEach((p, i) => (i ? g.lineTo(x(i), y(p.score)) : g.moveTo(x(i), y(p.score))));
-  g.lineTo(x(pts.length - 1), h - pad); g.lineTo(x(0), h - pad); g.closePath();
-  g.fillStyle = grad; g.fill();
-  g.beginPath();
-  pts.forEach((p, i) => (i ? g.lineTo(x(i), y(p.score)) : g.moveTo(x(i), y(p.score))));
-  g.strokeStyle = color; g.lineWidth = 2; g.stroke();
-  pts.forEach((p, i) => {
-    g.beginPath(); g.arc(x(i), y(p.score), i === pts.length - 1 ? 4.5 : 2.5, 0, Math.PI * 2);
-    g.fillStyle = i === pts.length - 1 ? '#fff' : color; g.fill();
-  });
-  g.fillStyle = '#8794a8';
-  g.fillText(String(Math.round(max)), 4, pad - 8);
+  g.stroke();
+  const last = pts.length - 1;
+  g.fillStyle = accent;
+  g.fillRect(x(last) - 2.5, y(scores[last]) - 2.5, 5, 5);
 }

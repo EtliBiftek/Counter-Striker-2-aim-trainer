@@ -11,24 +11,31 @@ export const DEFAULTS = {
   duration: 60,
   targetColor: '#ff3b3b',
   targetSize: 1.0,
-  theme: 'dust',
+  theme: 'gun',
+  quality: 'high',    // low | medium | high
+  viewmodel: true,    // show the rifle
+  footsteps: true,
+  difficulty: 'normal',
   countdown: true,
   showFps: false,
   renderScale: 1.0,
   volume: 0.6,
-  shotVolume: 0.35,
+  shotVolume: 0.45,
   hitSound: 'tink',
   name: '',
   touchMode: 'tap',   // 'tap' = shoot where you touch, 'drag' = drag to aim + fire button
   touchSens: 0.2,     // degrees per pixel of finger movement (drag mode)
+  // Crosshair in CS2 units (cl_crosshairsize, _thickness, _gap ...).
   xh: {
-    style: 'classic',
-    color: '#4dff6a',
-    len: 5,
-    thick: 1.5,
-    gap: 2,
-    alpha: 1,
+    size: 2,
+    thickness: 0.6,
+    gap: -2,
     outline: true,
+    outlineThickness: 1,
+    color: '#00ff00',
+    alpha: 1,
+    dot: false,
+    t: false,
     hitmarker: false,
   },
 };
@@ -39,8 +46,12 @@ export function load() {
   try {
     const raw = localStorage.getItem(KEY);
     const s = JSON.parse(raw || '{}');
-    // Phones: lower render resolution by default.
-    if (!raw && matchMedia('(pointer: coarse)').matches) s.renderScale = 0.75;
+    // Phones: lower render resolution and no shadows by default.
+    if (!raw && matchMedia('(pointer: coarse)').matches) { s.renderScale = 0.75; s.quality = 'low'; }
+    // Theme ids from 0.1.
+    s.theme = { dust: 'gun', night: 'gece', lab: 'beyaz' }[s.theme] || s.theme;
+    // 0.1 stored the crosshair in pixels; start over with CS2 defaults.
+    if (s.xh && !('size' in s.xh)) delete s.xh;
     return { ...structuredClone(DEFAULTS), ...s, xh: { ...DEFAULTS.xh, ...(s.xh || {}) } };
   } catch {
     return structuredClone(DEFAULTS);
@@ -71,36 +82,43 @@ export function verticalFov(s, aspect) {
 }
 
 /**
- * Parses CS2 console commands (`sensitivity 1.2; cl_crosshairsize "2"` …)
- * into settings. Crosshair units are converted approximately to pixels at
- * 1080p. Returns the list of applied keys.
+ * Imports from CS2: a crosshair share code (CSGO-xxxxx-...) and/or console
+ * commands / config.cfg lines (`sensitivity 1.2; cl_crosshairsize "2"`).
+ * Returns human-readable names of what was applied.
  */
-export function importCs2(text, s) {
+export function importCs2(text, s, decodeShareCode) {
+  const applied = [];
+  const code = text.match(/CSGO(-[A-Za-z0-9]{5}){5}/);
+  if (code) {
+    const xh = decodeShareCode(code[0]);
+    if (xh) {
+      Object.assign(s.xh, xh);
+      applied.push('nişangah kodu');
+    }
+  }
   const vals = {};
   for (const part of text.split(/[;\n]/)) {
     const m = part.trim().match(/^([a-z_0-9]+)\s+"?(-?[\d.]+)"?/i);
     if (m) vals[m[1].toLowerCase()] = parseFloat(m[2]);
   }
-  const applied = [];
-  const set = (k, fn) => { if (k in vals && Number.isFinite(vals[k])) { fn(vals[k]); applied.push(k); } };
-  set('sensitivity', v => { s.sens = clamp(v, 0.01, 20); });
-  set('cl_crosshairsize', v => { s.xh.len = clamp(v * 2, 0, 20); });
-  set('cl_crosshairthickness', v => { s.xh.thick = clamp(Math.max(0.5, v * 2), 0.5, 6); });
-  set('cl_crosshairgap', v => { s.xh.gap = clamp(v + 4, -4, 12); });
-  set('cl_crosshair_drawoutline', v => { s.xh.outline = v !== 0; });
-  set('cl_crosshairalpha', v => { s.xh.alpha = clamp(v / 255, 0.2, 1); });
-  set('cl_crosshairusealpha', v => { if (!v) s.xh.alpha = 1; });
-  set('cl_crosshairdot', v => {
-    if (v && s.xh.style === 'classic') s.xh.style = 'classic-dot';
-    if (!v && s.xh.style === 'classic-dot') s.xh.style = 'classic';
-  });
-  set('cl_crosshair_t', v => { if (v) s.xh.style = 't'; });
-  const presets = ['#ff3b3b', '#4dff6a', '#fff04d', '#3b6bff', '#4dfff6'];
-  set('cl_crosshaircolor', v => { if (v >= 0 && v < 5) s.xh.color = presets[v]; });
+  const set = (k, label, fn) => {
+    if (k in vals && Number.isFinite(vals[k])) { fn(vals[k]); if (!applied.includes(label)) applied.push(label); }
+  };
+  set('sensitivity', 'hassasiyet', v => { s.sens = clamp(v, 0.01, 20); });
+  set('cl_crosshairsize', 'boyut', v => { s.xh.size = clamp(v, 0, 20); });
+  set('cl_crosshairthickness', 'kalınlık', v => { s.xh.thickness = clamp(v, 0, 6); });
+  set('cl_crosshairgap', 'boşluk', v => { s.xh.gap = clamp(v, -10, 10); });
+  set('cl_crosshair_drawoutline', 'dış çizgi', v => { s.xh.outline = v !== 0; });
+  set('cl_crosshair_outlinethickness', 'dış çizgi', v => { s.xh.outlineThickness = clamp(v, 0, 3); });
+  set('cl_crosshairdot', 'nokta', v => { s.xh.dot = v !== 0; });
+  set('cl_crosshair_t', 'T şekli', v => { s.xh.t = v !== 0; });
+  set('cl_crosshairalpha', 'saydamlık', v => { s.xh.alpha = clamp(v / 255, 0.1, 1); });
+  set('cl_crosshairusealpha', 'saydamlık', v => { if (!v) s.xh.alpha = 1; });
+  const presets = ['#ff0000', '#00ff00', '#ffff00', '#0000ff', '#00ffff'];
+  set('cl_crosshaircolor', 'renk', v => { if (v >= 0 && v < 5) s.xh.color = presets[v]; });
   if (vals.cl_crosshaircolor === 5 && ['cl_crosshaircolor_r', 'cl_crosshaircolor_g', 'cl_crosshaircolor_b'].every(k => k in vals)) {
     const hex = k => clamp(Math.round(vals[k]), 0, 255).toString(16).padStart(2, '0');
     s.xh.color = '#' + hex('cl_crosshaircolor_r') + hex('cl_crosshaircolor_g') + hex('cl_crosshaircolor_b');
-    applied.push('cl_crosshaircolor_rgb');
   }
   return applied;
 }
