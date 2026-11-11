@@ -7,6 +7,8 @@ let serverOk = null; // null = unknown
 
 export async function backend() {
   if (tauri) return 'desktop';
+  // Static hosting (GitHub Pages) has no score server: skip the probe.
+  if (serverOk === null && /\.github\.io$/.test(location.hostname)) serverOk = false;
   if (serverOk === null) {
     try {
       const r = await fetch('api/health', { cache: 'no-store' });
