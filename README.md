@@ -86,7 +86,8 @@ o zaman liderlik tablosu tarayıcıda yerel tutulur. Dosyayı doğrudan açmak (
 APK'yı sabit bir anahtarla imzalamak için repo Secrets'a `ANDROID_KEYSTORE_B64`
 (base64 `.jks`, alias `tetik`) ve `ANDROID_KEYSTORE_PASSWORD` eklenebilir; eklenmezse her
 sürüm geçici bir anahtarla imzalanır (o zaman yeni sürüm için eski uygulamayı kaldırıp kurmak gerekir).
-Site her `main` push'unda `.github/workflows/pages.yml` ile GitHub Pages'e yayınlanır.
+Site GitHub Pages'te "Deploy from a branch" (`main`, `/ (root)`) ile yayınlanır: kökteki
+`index.html` oyuna (`web/`) yönlendirir, `.nojekyll` README'nin sayfa olarak işlenmesini engeller.
 
 ### Masaüstü uygulaması (Tauri)
 
